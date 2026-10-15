@@ -1,0 +1,43 @@
+{
+  "name": "@dylanhalstead/pi-model-switch-guard",
+  "version": "0.1.0",
+  "description": "Confirm mid-session model switches before sending the next Pi prompt.",
+  "keywords": [
+    "pi-extension",
+    "pi-package"
+  ],
+  "homepage": "https://github.com/DylanHalstead/pi-extensions/tree/main/extensions/model-switch-guard#readme",
+  "bugs": {
+    "url": "https://github.com/DylanHalstead/pi-extensions/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DylanHalstead/pi-extensions.git",
+    "directory": "extensions/model-switch-guard"
+  },
+  "files": [
+    "src/index.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "vp -C ../.. check extensions/model-switch-guard",
+    "typecheck": "vp check --no-fmt --no-lint .",
+    "test": "vp -C ../.. test extensions/model-switch-guard/src",
+    "prepublishOnly": "pnpm -C ../.. verify"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

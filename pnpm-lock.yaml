@@ -187,6 +187,8 @@ importers:
 
   extensions/inline-skills: {}
 
+  extensions/model-switch-guard: {}
+
 packages:
 
   '@anthropic-ai/sdk@0.129.0':

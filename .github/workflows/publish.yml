@@ -1,0 +1,120 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - pi-inline-skills-v*
+      - pi-model-switch-guard-v*
+
+permissions:
+  contents: read
+
+# Serialize versions of one package without blocking the other package.
+concurrency:
+  group: publish-${{ startsWith(github.ref_name, 'pi-inline-skills-v') && 'inline-skills' || 'model-switch-guard' }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+      - name: Validate release target
+        id: release
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^pi-(inline-skills|model-switch-guard)-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Unsupported release tag: $RELEASE_TAG"
+            exit 1
+          fi
+          extension="${BASH_REMATCH[1]}"
+          directory="extensions/$extension"
+          package="$(jq -er '.name | strings' "$directory/package.json")"
+          version="$(jq -er '.version | strings' "$directory/package.json")"
+          if [[ "$package" != "@dylanhalstead/pi-$extension" || "$RELEASE_TAG" != "pi-$extension-v$version" ]]; then
+            echo "::error::Tag must select the committed package name and version"
+            exit 1
+          fi
+          git merge-base --is-ancestor HEAD origin/main
+          {
+            echo "directory=$directory"
+            echo "package=$package"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: .tool-versions
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@12.2.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - name: Pack selected package
+        id: artifact
+        shell: bash
+        env:
+          EXTENSION_DIRECTORY: ${{ steps.release.outputs.directory }}
+        run: |
+          set -euo pipefail
+          pnpm --dir "$EXTENSION_DIRECTORY" pack --ignore-scripts --out "$RUNNER_TEMP/package.tgz"
+          integrity="sha512-$(openssl dgst -sha512 -binary "$RUNNER_TEMP/package.tgz" | openssl base64 -A)"
+          echo "integrity=$integrity" >> "$GITHUB_OUTPUT"
+      - name: Check published artifact
+        id: registry
+        shell: bash
+        env:
+          PACKAGE: ${{ steps.release.outputs.package }}
+          VERSION: ${{ steps.release.outputs.version }}
+          INTEGRITY: ${{ steps.artifact.outputs.integrity }}
+        run: |
+          set -euo pipefail
+          encoded_package="$(jq -rn --arg package "$PACKAGE" '$package | @uri')"
+          status="$(curl --silent --show-error --location --retry 3 --connect-timeout 10 --max-time 30 \
+            --output "$RUNNER_TEMP/npm-version.json" --write-out '%{http_code}' \
+            "https://registry.npmjs.org/$encoded_package/$VERSION")"
+          case "$status" in
+            404)
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+              ;;
+            200)
+              if ! jq -e --arg package "$PACKAGE" --arg version "$VERSION" --arg integrity "$INTEGRITY" \
+                '.name == $package and .version == $version and .dist.integrity == $integrity' \
+                "$RUNNER_TEMP/npm-version.json" > /dev/null; then
+                echo "::error::npm already contains different contents for $PACKAGE@$VERSION"
+                exit 1
+              fi
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "Exact artifact already published; completing the GitHub Release"
+              ;;
+            *)
+              echo "::error::Could not check npm: HTTP $status"
+              exit 1
+              ;;
+          esac
+      - name: Publish selected artifact
+        if: steps.registry.outputs.exists == 'false'
+        shell: bash
+        run: npm publish "$RUNNER_TEMP/package.tgz" --access public --provenance
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          PACKAGE: ${{ steps.release.outputs.package }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "$PACKAGE $VERSION" --latest=false \
+              --notes "Published [$PACKAGE@$VERSION](https://www.npmjs.com/package/$PACKAGE/v/$VERSION) to npm."
+          fi

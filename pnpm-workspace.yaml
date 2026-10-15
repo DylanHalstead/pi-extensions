@@ -1,0 +1,31 @@
+packages:
+  - extensions/*
+  - packages/*
+
+autoInstallPeers: false
+
+# Vite+ ships a compatible Vite fork under its own release version.
+peerDependencyRules:
+  allowedVersions:
+    vite: "*"
+
+allowBuilds:
+  "@google/genai": false
+  esbuild: false
+  koffi: false
+  # The root prepare script installs hooks on every workspace install.
+  lefthook: false
+  protobufjs: false
+
+# Allow this exact Vite+ release without relaxing age checks for other packages.
+minimumReleaseAgeExclude:
+  - "@voidzero-dev/vite-plus-core@1.2.0"
+  - "@voidzero-dev/vite-plus-darwin-arm64@1.2.0"
+  - "@voidzero-dev/vite-plus-darwin-x64@1.2.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-gnu@1.2.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-musl@1.2.0"
+  - "@voidzero-dev/vite-plus-linux-x64-gnu@1.2.0"
+  - "@voidzero-dev/vite-plus-linux-x64-musl@1.2.0"
+  - "@voidzero-dev/vite-plus-win32-arm64-msvc@1.2.0"
+  - "@voidzero-dev/vite-plus-win32-x64-msvc@1.2.0"
+  - vite-plus@1.2.0

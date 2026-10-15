@@ -1,0 +1,43 @@
+{
+  "name": "@dylanhalstead/pi-inline-skills",
+  "version": "0.1.0",
+  "description": "Autocomplete inline $skill-name mentions as file references in Pi.",
+  "keywords": [
+    "pi-extension",
+    "pi-package"
+  ],
+  "homepage": "https://github.com/DylanHalstead/pi-extensions/tree/main/extensions/inline-skills#readme",
+  "bugs": {
+    "url": "https://github.com/DylanHalstead/pi-extensions/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DylanHalstead/pi-extensions.git",
+    "directory": "extensions/inline-skills"
+  },
+  "files": [
+    "src/index.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "vp -C ../.. check extensions/inline-skills",
+    "typecheck": "vp check --no-fmt --no-lint .",
+    "test": "vp -C ../.. test extensions/inline-skills/src",
+    "prepublishOnly": "pnpm -C ../.. verify"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

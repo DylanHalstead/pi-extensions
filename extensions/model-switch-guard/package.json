@@ -1,6 +1,6 @@
 {
   "name": "@dylanhalstead/pi-model-switch-guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Confirm mid-session model switches before sending the next Pi prompt.",
   "keywords": [
     "pi-extension",
